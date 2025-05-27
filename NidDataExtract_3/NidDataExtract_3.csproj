@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\Scripts\__pycache__\github_image_process_Tesse.cpython-312.pyc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Scripts\combine_Tesse_easy_4.py" />
+    <None Remove="Scripts\combine_Tesse_easy_5.py" />
+    <None Remove="Scripts\Combine_V1.py" />
+    <None Remove="Scripts\Combine_V2.py" />
+    <None Remove="Scripts\Combine_V3.py" />
+    <None Remove="Scripts\face_verification.py" />
+    <None Remove="Scripts\github_image_process_Tesse.py" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Scripts\combine_Tesse_easy_4.py" />
+    <Content Include="Scripts\combine_Tesse_easy_5.py" />
+    <Content Include="Scripts\Combine_V1.py" />
+    <Content Include="Scripts\Combine_V2.py" />
+    <Content Include="Scripts\Combine_V3.py" />
+    <Content Include="Scripts\face_verification.py" />
+    <Content Include="Scripts\github_image_process_Tesse.py" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\Scripts\__pycache__\github_image_process_Tesse.cpython-312.pyc" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,138 @@
+﻿@{
+    ViewData["Title"] = "Bangladesh NID OCR";
+}
+<h2 class="mb-4">Bangladesh NID OCR</h2>
+
+<div class="row">
+    <div class="col-2">
+        <div class="mb-1">
+            <label for="version" class="form-label">Select OCR Version:</label>
+            <select name="version" id="version" class="form-select">
+                <option value="V1">V1</option>
+                <option value="V2">V2</option>
+                <option value="V3" selected>V3</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-8">
+        <form id="nidForm" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="nidImage" class="form-label">Upload NID Image:</label>
+                <input type="file" name="nidImage" id="nidImage" class="form-control" accept="image/*" required onchange="previewImage(event)" />
+            </div>
+
+
+            <div class="mb-3">
+                <img id="preview" style="width: 50%; height: auto; display: none; border: 1px solid #ccc; padding: 10px;" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+
+        <div id="loading" class="mt-3 text-warning" style="display:none;">🔄 Processing, please wait...</div>
+    </div>
+
+    <div class="col-4" id="resultForm" style="display: none;">
+        <h5 class="mb-3">OCR Result</h5>
+
+        <div class="mb-2">
+            <label class="form-label">নাম (Bengali)</label>
+            <input type="text" id="BengaliName" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">পিতা</label>
+            <input type="text" id="FatherName" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">মাতা</label>
+            <input type="text" id="MotherName" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">স্বামী/স্ত্রী</label>
+            <input type="text" id="HusbandName" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB" class="form-control form-control-sm" readonly />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber" class="form-control form-control-sm" readonly />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function previewImage(event) {
+            const reader = new FileReader();
+            reader.onload = function () {
+                const output = document.getElementById('preview');
+                output.src = reader.result;
+                output.style.display = 'block';
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        $('#nidForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('nidImage');
+            const version = document.getElementById('version').value;
+
+            if (fileInput.files.length === 0) {
+                alert("Please select an image.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("nidImage", fileInput.files[0]);
+            formData.append("version", version); // ✅ explicitly append version
+
+            $('#loading').show();
+            $('#resultForm').hide();
+
+            $.ajax({
+                url: '@Url.Action("ProcessNID", "Home")',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#loading').hide();
+
+                    $('#BengaliName').val(data["নাম"]);
+                    $('#EnglishName').val(data.name);
+                    $('#FatherName').val(data["পিতা"]);
+                    $('#MotherName').val(data["মাতা"]);
+                    $('#HusbandName').val(data["স্বামী"]);
+                    $('#DOB').val(data.dateOfBirth);
+                    $('#NIDNumber').val(data.idno);
+
+                    $('#resultForm').show();
+                },
+                error: function (xhr, status, error) {
+                    $('#loading').hide();
+                    alert("❌ Error processing image.");
+                    console.log("XHR:", xhr);
+                    console.log("Status:", status);
+                    console.log("Error:", error);
+                }
+            });
+        });
+    </script>
+}
