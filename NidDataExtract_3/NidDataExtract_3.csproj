@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot\Scripts\__pycache__\github_image_process_Tesse.cpython-312.pyc" />
+    <Content Remove="wwwroot\scripts\test.py" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,6 +21,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <_ContentIncludedByDefault Remove="wwwroot\scripts\test.py" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="Scripts\combine_Tesse_easy_4.py" />
     <Content Include="Scripts\combine_Tesse_easy_5.py" />
     <Content Include="Scripts\Combine_V1.py" />
@@ -31,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\Scripts\__pycache__\github_image_process_Tesse.cpython-312.pyc" />
+    <None Include="wwwroot\scripts\test.py" />
   </ItemGroup>
 
   <ItemGroup>

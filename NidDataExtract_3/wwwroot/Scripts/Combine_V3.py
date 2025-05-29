@@ -15,9 +15,12 @@ if len(sys.argv) < 2:
     print(json.dumps({"error": "Image path is required"}))
     sys.exit(1)
 
+easyocr_dir = r'D:\easyocr_data'
 # Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-reader = easyocr.Reader(['en', 'bn'], gpu=False)
+#reader = easyocr.Reader(['en', 'bn'],gpu=False,model_storage_directory=easyocr_dir,user_network_directory=easyocr_dir)
+reader = easyocr.Reader(['en', 'bn'],gpu=False)
+
 
 # Code 1 Regex Patterns
 fields_code1 = {

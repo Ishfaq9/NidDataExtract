@@ -161,7 +161,7 @@ namespace NidDataExtract_3.Controllers
             //string scriptPath = $"D:\\source\\NidDataExtract_3\\NidDataExtract_3\\Scripts\\Combine_{version.ToUpper()}.py";
             //string scriptPath = Path.Combine(_env.ContentRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
             //string scriptPath = "D:\\source\\NidDataExtract_3\\NidDataExtract_3\\Scripts\\combine_Tesse_easy_4.py";
-            string scriptPath = Path.Combine(_env.ContentRootPath, "wwwroot", "Scripts", $"Combine_{version.ToUpper()}.py");
+            string scriptPath = Path.Combine(_env.WebRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
 
             string pythonExe = "C:\\Program Files\\Python312\\python.exe";
 
@@ -184,7 +184,7 @@ namespace NidDataExtract_3.Controllers
 
                 var result = JsonConvert.DeserializeObject<NidImageResult>(output);
                 if (result == null)
-                    return new Response { IsSuccess = false, Status = "Failed", Message = "Could not extract data." };
+                    return new Response { IsSuccess = false, Status = "Failed", Message = error };
 
                 return new Response
                 {
@@ -193,6 +193,8 @@ namespace NidDataExtract_3.Controllers
                     Message = "NID data extracted.",
                     ObjResponse = result
                 };
+
+
             }
             catch (Exception ex)
             {
