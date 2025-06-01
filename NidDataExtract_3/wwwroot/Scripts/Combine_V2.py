@@ -24,6 +24,7 @@ easyocr_dir = r'D:\easyocr_data'
 # Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\easy\model',user_network_directory =r'C:\easy\network')
+
 # Code 1 Regex Patterns
 fields_code1 = {
     'নাম': r'নাম[:：]?\s*([^\n:：]+)',

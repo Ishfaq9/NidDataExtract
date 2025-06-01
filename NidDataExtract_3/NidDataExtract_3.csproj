@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="wwwroot\scripts\test.py" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="Scripts\combine_Tesse_easy_4.py" />
     <None Remove="Scripts\combine_Tesse_easy_5.py" />
     <None Remove="Scripts\Combine_V1.py" />
@@ -18,10 +14,6 @@
     <None Remove="Scripts\Combine_V3.py" />
     <None Remove="Scripts\face_verification.py" />
     <None Remove="Scripts\github_image_process_Tesse.py" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <_ContentIncludedByDefault Remove="wwwroot\scripts\test.py" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="wwwroot\scripts\test.py" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Folder Include="wwwroot\scripts\" />
   </ItemGroup>
 
 </Project>

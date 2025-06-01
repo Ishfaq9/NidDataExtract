@@ -9,18 +9,16 @@ import sys
 from PIL import Image
 from math import atan, degrees, radians, sin, cos, fabs
 
-sys.stdout.reconfigure(encoding='utf-8')
-# Get image path from argument
+#sys.stdout.reconfigure(encoding='utf-8')
+# # Get image path from argument
 if len(sys.argv) < 2:
     print(json.dumps({"error": "Image path is required"}))
     sys.exit(1)
 
-easyocr_dir = r'D:\easyocr_data'
 # Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-#reader = easyocr.Reader(['en', 'bn'],gpu=False,model_storage_directory=easyocr_dir,user_network_directory=easyocr_dir)
-reader = easyocr.Reader(['en', 'bn'],gpu=False)
-
+#reader = easyocr.Reader(['en', 'bn'], gpu=False)
+reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\easy\model',user_network_directory =r'C:\easy\network')
 
 # Code 1 Regex Patterns
 fields_code1 = {
@@ -51,7 +49,7 @@ fields_code2 = {
 def clean_header_text(text):
     keywords_to_remove = [
         "বাংলাদেশ সরকার", "জাতীয় পরিচয়", "জাতীয় পরিচয়", "National ID",
-        "Government of the People's Republic"
+        "Government of the People's Republic","জাতীয় পরিচয্ন পত্র"
     ]
     cleaned_lines = []
     for line in text.splitlines():
@@ -78,217 +76,138 @@ def extract_fields_code1(text):
         match = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
         if match:
             value = match.group(1).strip()
+            # Condition 2: Skip if value is empty
+            if not value:
+                extracted[key] = "Not found"
+                continue
+            # Clean IDNO by removing spaces
             if key == 'IDNO':
-                value = value.replace(" ", "")  # Remove spaces from NID
-            extracted[key] = value
+                value = value.replace(" ", "")
+            # Condition 1: Check for single word with < 3 letters
+            if len(value.split()) == 1 and len(value) < 3:
+                extracted[key] = "Not found"
+            else:
+                extracted[key] = value
         else:
             extracted[key] = "Not found"
     return extracted
 
 
 # Code 2 Functions
-#------------ rotate part
-class ImgCorrect():
+class ImgCorrect:
     def __init__(self, img):
         self.img = img
         self.h, self.w, self.channel = self.img.shape
-        # print("Original images h & w -> | w: ",self.w, "| h: ",self.h)
         if self.w <= self.h:
             self.scale = 700 / self.w
             self.img = cv2.resize(self.img, (0, 0), fx=self.scale, fy=self.scale, interpolation=cv2.INTER_NEAREST)
         else:
             self.scale = 700 / self.h
             self.img = cv2.resize(self.img, (0, 0), fx=self.scale, fy=self.scale, interpolation=cv2.INTER_NEAREST)
-        #print("Resized Image by Padding and Scaling:")
-        #plot_fig(self.img)
         self.gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
 
     def img_lines(self):
-        #print("Gray Image:")
-        #plot_fig(self.gray)
         ret, binary = cv2.threshold(self.gray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-        # cv2.imshow("bin",binary)
-        #print("Inverse Binary:")
-        #plot_fig(binary)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))  # rectangular structure
-        # print("Kernel for dialation:")
-        # print(kernel)
-        binary = cv2.dilate(binary, kernel)  # dilate
-        #print("Dilated Binary:")
-        #plot_fig(binary)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        binary = cv2.dilate(binary, kernel)
         edges = cv2.Canny(binary, 50, 200)
-        #print("Canny edged detection:")
-        #plot_fig(edges)
-
-        # print("Edge 1: ")
-        # cv2.imshow("edges", edges)
-
         self.lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=20)
-        # print(self.lines)
         if self.lines is None:
-            #print("Line segment not found")
             return None
-
-        lines1 = self.lines[:, 0, :]  # Extract as 2D
-        # print(lines1)
+        lines1 = self.lines[:, 0, :]
         imglines = self.img.copy()
         for x1, y1, x2, y2 in lines1[:]:
             cv2.line(imglines, (x1, y1), (x2, y2), (0, 255, 0), 3)
-        #print("Probabilistic Hough Lines:")
-        #plot_fig(imglines)
         return imglines
 
     def search_lines(self):
-      lines = self.lines[:, 0, :]  # extract as 2D
+        lines = self.lines[:, 0, :]
+        number_inexist_k = 0
+        sum_pos_k45 = number_pos_k45 = 0
+        sum_pos_k90 = number_pos_k90 = 0
+        sum_neg_k45 = number_neg_k45 = 0
+        sum_neg_k90 = number_neg_k90 = 0
+        sum_zero_k = number_zero_k = 0
 
-      number_inexist_k = 0
-      sum_pos_k45 = number_pos_k45 = 0
-      sum_pos_k90 = number_pos_k90 = 0
-      sum_neg_k45 = number_neg_k45 = 0
-      sum_neg_k90 = number_neg_k90 = 0
-      sum_zero_k = number_zero_k = 0
+        for x in lines:
+            if x[2] == x[0]:
+                number_inexist_k += 1
+                continue
+            degree = degrees(atan((x[3] - x[1]) / (x[2] - x[0])))
+            if 0 < degree < 45:
+                number_pos_k45 += 1
+                sum_pos_k45 += degree
+            if 45 <= degree < 90:
+                number_pos_k90 += 1
+                sum_pos_k90 += degree
+            if -45 < degree < 0:
+                number_neg_k45 += 1
+                sum_neg_k45 += degree
+            if -90 < degree <= -45:
+                number_neg_k90 += 1
+                sum_neg_k90 += degree
+            if x[3] == x[1]:
+                number_zero_k += 1
 
-      for x in lines:
-          if x[2] == x[0]:
-              number_inexist_k += 1
-              continue
-          #print(degrees(atan((x[3] - x[1]) / (x[2] - x[0]))), "pos:", x[0], x[1], x[2], x[3], "Slope:",(x[3] - x[1]) / (x[2] - x[0]))
-          degree = degrees(atan((x[3] - x[1]) / (x[2] - x[0])))
-          # print("Degree or Slope of detected lines : ",degree)
-          if 0 < degree < 45:
-              number_pos_k45 += 1
-              sum_pos_k45 += degree
-          if 45 <= degree < 90:
-              number_pos_k90 += 1
-              sum_pos_k90 += degree
-          if -45 < degree < 0:
-              number_neg_k45 += 1
-              sum_neg_k45 += degree
-          if -90 < degree <= -45:
-              number_neg_k90 += 1
-              sum_neg_k90 += degree
-          if x[3] == x[1]:
-              number_zero_k += 1
+        max_number = max(number_inexist_k, number_pos_k45, number_pos_k90, number_neg_k45, number_neg_k90,
+                         number_zero_k)
 
-      max_number = max(number_inexist_k, number_pos_k45, number_pos_k90, number_neg_k45,number_neg_k90, number_zero_k)
-      # print("Num of lines in different Degree range ->")
-      # print("Not a Line: ",number_inexist_k, "| 0 to 45: ",number_pos_k45, "| 45 to 90: ",number_pos_k90, "| -45 to 0: ",number_neg_k45, "| -90 to -45: ",number_neg_k90, "| Line where y1 equals y2 :",number_zero_k)
-
-      if max_number == number_inexist_k:
-          return 90
-      if max_number == number_pos_k45:
-          return sum_pos_k45 / number_pos_k45
-      if max_number == number_pos_k90:
-          return sum_pos_k90 / number_pos_k90
-      if max_number == number_neg_k45:
-          return sum_neg_k45 / number_neg_k45
-      if max_number == number_neg_k90:
-          return sum_neg_k90 / number_neg_k90
-      if max_number == number_zero_k:
-          return 0
+        if max_number == number_inexist_k:
+            return 90
+        if max_number == number_pos_k45:
+            return sum_pos_k45 / number_pos_k45
+        if max_number == number_pos_k90:
+            return sum_pos_k90 / number_pos_k90
+        if max_number == number_neg_k45:
+            return sum_neg_k45 / number_neg_k45
+        if max_number == number_neg_k90:
+            return sum_neg_k90 / number_neg_k90
+        if max_number == number_zero_k:
+            return 0
 
     def rotate_image(self, degree):
-        """
-        Positive angle counterclockwise rotation
-        :param degree:
-        :return:
-        """
-        # print("degree:", degree)
         if -45 <= degree <= 0:
-            degree = degree  # #negative angle clockwise
+            degree = degree
         if -90 <= degree < -45:
-            degree = 90 + degree  # positive angle counterclockwise
+            degree = 90 + degree
         if 0 < degree <= 45:
-            degree = degree  # positive angle counterclockwise
+            degree = degree
         if 45 < degree <= 90:
-            degree = degree - 90  # negative angle clockwise
-        #print("DSkew angle: ", degree)
-
-        # degree = degree - 90
+            degree = degree - 90
         height, width = self.img.shape[:2]
-        heightNew = int(width * fabs(sin(radians(degree))) + height * fabs(
-            cos(radians(degree))))  # This formula refers to the previous content
+        heightNew = int(width * fabs(sin(radians(degree))) + height * fabs(cos(radians(degree))))
         widthNew = int(height * fabs(sin(radians(degree))) + width * fabs(cos(radians(degree))))
-        # print("Height :",height)
-        # print("Width :",width)
-        # print("HeightNew :",heightNew)
-        # print("WidthNew :",widthNew)
-
-        matRotation = cv2.getRotationMatrix2D((width / 2, height / 2), degree, 1)  # rotate degree counterclockwise
-        # print("Mat Rotation (Before): ",matRotation)
+        matRotation = cv2.getRotationMatrix2D((width / 2, height / 2), degree, 1)
         matRotation[0, 2] += (widthNew - width) / 2
-        # Because after rotation, the origin of the coordinate system is the upper left corner of the new image, so it needs to be converted according to the original image
         matRotation[1, 2] += (heightNew - height) / 2
-        # print("Mat Rotation (After): ",matRotation)
-
-        # Affine transformation, the background color is filled with white
         imgRotation = cv2.warpAffine(self.img, matRotation, (widthNew, heightNew), borderValue=(255, 255, 255))
-
-        # Padding
-        pad_image_rotate = cv2.warpAffine(self.img, matRotation, (widthNew, heightNew), borderValue=(0, 255, 0))
-        #plot_fig(pad_image_rotate)
-
         return imgRotation
 
 
-
 def dskew(img):
-    #img_loc = line_path + img
-    #im = cv2.imread(img_loc)
-    im=img
-    # Padding
     bg_color = [255, 255, 255]
-    pad_img = cv2.copyMakeBorder(im,100,100,100,100,cv2.BORDER_CONSTANT,value=bg_color)
-
+    pad_img = cv2.copyMakeBorder(img, 100, 100, 100, 100, cv2.BORDER_CONSTANT, value=bg_color)
     imgcorrect = ImgCorrect(pad_img)
     lines_img = imgcorrect.img_lines()
-    # print(type(lines_img))
-
     if lines_img is None:
         rotate = imgcorrect.rotate_image(0)
     else:
         degree = imgcorrect.search_lines()
         rotate = imgcorrect.rotate_image(degree)
-
-
     return rotate
 
 
-# ✅ Preprocessing function (fixed version)
 def preprocess_before_crop(scan_path):
-    #original_image = cv2.imread(scan_path)
     original_image = scan_path
-
-    # Convert to grayscale
     gray = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-
-    # Skip equalizeHist to avoid background merging problems
-
-    # Initial Denoising
-    #denoised = cv2.fastNlMeansDenoising(gray, None, h=20, templateWindowSize=7, searchWindowSize=21)
-
-    # Sharpening
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     sharpened = cv2.filter2D(gray, -1, kernel)
-
-    # Bilateral filter
     bilateral_filtered = cv2.bilateralFilter(sharpened, d=9, sigmaColor=75, sigmaSpace=75)
-
-    # Contrast using CLAHE
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     contrast = clahe.apply(bilateral_filtered)
-
-    # Blur
     blurred = cv2.GaussianBlur(contrast, (3, 3), 0)
-
-    # Adaptive Threshold
-    adaptive_thresh = cv2.adaptiveThreshold(blurred, 255,
-                                            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                            cv2.THRESH_BINARY, 11, 2)
-
+    adaptive_thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
     return gray, original_image
-
-
 
 
 def get_tesseract_ocr(image):
@@ -319,7 +238,7 @@ def clean_ocr_text(text):
     keywords_to_remove = [
         r"গণপ্রজাতন্ত্রী বাংলাদেশ সরকার", r"গণপ্রজাতন্ত্রী সরকার", r"গণপ্রজাতন্ত্রী",
         r"বাংলাদেশ সরকার", r"Government of the People", r"National ID Card",
-        r"জাতীয় পরিচয় পত্র", r"জাতীয় পরিচয়", r"20/05/2025 09:12"
+        r"জাতীয় পরিচয় পত্র", r"জাতীয় পরিচয়", r"20/05/2025 09:12",r"জাতীয় পরিচয্ন পত্র"
     ]
     dob_pattern = r"(Date of Birth|DOB|Date|Birth)[:：]?\s*(\d{1,2}\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})"
     id_no_pattern = r"(ID\s*NO|NID\s*No\.?|NIDNo|NID\s*NO|NID\s*No|ID\s*N0)\s*[:：]?\s*([\d ]{8,30})"
@@ -377,22 +296,30 @@ def merge_lines(text):
 
 
 def clean_bangla_name(name):
-    if not name or name == "Not found":
-        return name
+    if not name or name == "Not found":  # Condition 2: Explicitly check empty
+        return "Not found"
     cleaned = re.sub(r"[^\u0980-\u09FF\s]", "", name).strip()
-    return re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    # Condition 1: Check for single word with < 3 letters
+    if len(cleaned.split()) == 1 and len(cleaned) < 3:
+        return "Not found"
+    return cleaned if cleaned else "Not found"
 
 
 def clean_english_name(name):
-    if not name or name == "Not found":
-        return name
+    if not name or name == "Not found":  # Condition 2: Explicitly check empty
+        return "Not found"
     cleaned = re.sub(r"[^A-Za-z\s\.]", "", name).strip()
-    return re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    # Condition 1: Check for single word with < 3 letters
+    if len(cleaned.split()) == 1 and len(cleaned) < 3:
+        return "Not found"
+    return cleaned if cleaned else "Not found"
 
 
 def clean_date_of_birth(date):
-    if not date or date == "Not found":
-        return date
+    if not date or date == "Not found":  # Condition 2: Explicitly check empty
+        return "Not found"
     cleaned = re.sub(r"[^0-9A-Za-z\s\-/]", "", date).strip()
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     if re.match(
@@ -405,8 +332,8 @@ def clean_date_of_birth(date):
 
 
 def clean_id_no(id_no):
-    if not id_no or id_no == "Not found":
-        return id_no
+    if not id_no or id_no == "Not found":  # Condition 2: Explicitly check empty
+        return "Not found"
     cleaned = re.sub(r"[^0-9]", "", id_no).strip()
     if re.match(r"^\d{10}$|^\d{13}$|^\d{17}$", cleaned):
         return cleaned
@@ -417,35 +344,58 @@ def extract_fields_code2(text):
     extracted = {key: "Not found" for key in fields_code2}
     text = clean_ocr_text(text)
     text = merge_lines(text)
+
+    # Regex-based extraction
     for key, pattern in fields_code2.items():
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            extracted[key] = match.group(1).strip()
+            value = match.group(1).strip()
+            # Condition 2: Skip if value is empty
+            if not value:
+                extracted[key] = "Not found"
+                continue
+            # Condition 1: Check for single word with < 3 letters
+            if len(value.split()) == 1 and len(value) < 3:
+                extracted[key] = "Not found"
+            else:
+                extracted[key] = value
+
+    # Line-based inference for remaining fields
     lines = text.splitlines()
     name_index = -1
     for i, line in enumerate(lines):
+        line = line.strip()
+        # Condition 2: Skip empty lines
+        if not line:
+            continue
+        # Condition 1: Skip single-word lines with < 3 letters
+        if len(line.split()) == 1 and len(line) < 3:
+            continue
+        # Skip lines that match any pattern to avoid reprocessing
         if not any(re.search(pattern, line, re.IGNORECASE) for pattern in fields_code2.values()):
             if re.match(r"[^\x00-\x7F]+", line) and extracted["নাম"] == "Not found":
-                extracted["নাম"] = line.strip()
+                extracted["নাম"] = line
                 name_index = i
             elif re.match(r"[A-Za-z\s\.]+", line) and extracted["Name"] == "Not found" and (
                     name_index == -1 or i > name_index):
-                extracted["Name"] = line.strip()
-            elif (re.match(r"[^\x00-\x7F]+", line) and extracted["পিতা"] == "Not found"):
+                extracted["Name"] = line
+            elif re.match(r"[^\x00-\x7F]+", line) and extracted["পিতা"] == "Not found":
                 if (extracted["Name"] != "Not found" and i > lines.index(extracted["Name"]) if extracted[
                                                                                                    "Name"] in lines else True) or \
                         (extracted["নাম"] != "Not found" and i > lines.index(extracted["নাম"]) if extracted[
                                                                                                       "নাম"] in lines else i > name_index):
-                    extracted["পিতা"] = line.strip()
-            elif (re.match(r"[^\x00-\x7F]+", line) and extracted["মাতা"] == "Not found" and extracted[
-                "পিতা"] != "Not found"):
+                    extracted["পিতা"] = line
+            elif re.match(r"[^\x00-\x7F]+", line) and extracted["মাতা"] == "Not found" and extracted[
+                "পিতা"] != "Not found":
                 if (extracted["পিতা"] != "Not found" and i > lines.index(extracted["পিতা"]) if extracted[
                                                                                                    "পিতা"] in lines else True) or \
                         (extracted["Name"] != "Not found" and i > lines.index(extracted["Name"]) if extracted[
                                                                                                         "Name"] in lines else True) or \
                         (extracted["নাম"] != "Not found" and i > lines.index(extracted["নাম"]) if extracted[
                                                                                                       "নাম"] in lines else i > name_index):
-                    extracted["মাতা"] = line.strip()
+                    extracted["মাতা"] = line
+
+    # Apply cleaning functions
     extracted["নাম"] = clean_bangla_name(extracted["নাম"])
     extracted["পিতা"] = clean_bangla_name(extracted["পিতা"])
     extracted["মাতা"] = clean_bangla_name(extracted["মাতা"])
@@ -454,64 +404,27 @@ def extract_fields_code2(text):
     extracted["Name"] = clean_english_name(extracted["Name"])
     extracted["DateOfBirth"] = clean_date_of_birth(extracted["DateOfBirth"])
     extracted["IDNO"] = clean_id_no(extracted["IDNO"])
+
+    # Validate language-specific fields
     fields_to_validate = ['নাম', 'পিতা', 'মাতা', 'স্বামী', 'স্ত্রী']
     for field in fields_to_validate:
         if contains_english(extracted[field]):
             extracted[field] = "Not found"
     if contains_bangla(extracted["Name"]):
         extracted["Name"] = "Not found"
+
     return extracted
 
 
-# Commented Code 2 Functions for Optional Use
-# # Format OCR results for side-by-side comparison
-# def format_ocr_results(tesseract_results, easyocr_results):
-#     output = []
-#     for field in fields_code2.keys():
-#         tesseract_value = tesseract_results.get(field, "Not found")
-#         easyocr_value = easyocr_results.get(field, "Not found")
-#         output.append(f"tesseract -> {field}: {tesseract_value}   easy ocr -> {field}: {easyocr_value}")
-#     return "\n".join(output)
-
-# # Combine OCR results based on conditions
-# def combine_ocr_results(tesseract_results, easyocr_results):
-#     combined = {}
-#     for field in fields_code2.keys():
-#         tesseract_value = tesseract_results.get(field, "Not found")
-#         easyocr_value = easyocr_results.get(field, "Not found")
-#         # Condition 1: If both match, take Tesseract's value
-#         if tesseract_value == easyocr_value:
-#             combined[field] = tesseract_value
-#         # Condition 2: If both are "Not found", use "Not found"
-#         elif tesseract_value == "Not found" and easyocr_value == "Not found":
-#             combined[field] = "Not found"
-#         # Condition 3: If only one has data, take it
-#         elif tesseract_value != "Not found" and easyocr_value == "Not found":
-#             combined[field] = tesseract_value
-#         elif tesseract_value == "Not found" and easyocr_value != "Not found":
-#             combined[field] = easyocr_value
-#         # Condition 4: If they differ, take the one with more words
-#         else:
-#             tesseract_words = len(tesseract_value.split())
-#             easyocr_words = len(easyocr_value.split())
-#             combined[field] = tesseract_value if tesseract_words >= easyocr_words else easyocr_value
-#     output = [f"{field}: {value}" for field, value in combined.items()]
-#     return "\n".join(output)
-
-# Comparison Logic
 def remove_special_chars(text, field):
     if text == "Not found" or not text:
         return text
     if field == "DateOfBirth":
-        # Keep digits, letters, spaces, - / . for dates
         cleaned = re.sub(r"[^0-9A-Za-z\s\-/\.]", "", text).strip()
-        # Replace - or / with space for consistency in comparison
         cleaned = re.sub(r"[-/]", " ", cleaned).strip()
         return re.sub(r"\s+", " ", cleaned).strip()
     if field == "IDNO":
-        # Keep only digits
         return re.sub(r"[^0-9]", "", text).strip()
-    # For other fields, keep letters, Bangla, spaces, and dots
     cleaned = re.sub(r"[^A-Za-z\s\.\u0980-\u09FF]", "", text).strip()
     return re.sub(r"\s+", " ", cleaned).strip()
 
@@ -519,11 +432,9 @@ def remove_special_chars(text, field):
 def clean_date_field(text):
     if text == "Not found" or not text:
         return text
-    # Match valid date patterns: DD Month YYYY or DD-MM-YYYY or DD/MM/YYYY
     date_pattern = r'^(\d{1,2}\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})\s*(.*)$'
     match = re.match(date_pattern, text, re.IGNORECASE)
     if match:
-        # Return only the valid date part, excluding trailing characters
         return match.group(1).strip()
     return text
 
@@ -531,29 +442,15 @@ def clean_date_field(text):
 def clean_all_special_chars(text):
     if text == "Not found" or not text:
         return text
-    # Keep letters, Bangla characters, digits, spaces, and dots; remove all else
     cleaned = re.sub(r"[^A-Za-z0-9\s\.\u0980-\u09FF]", "", text).strip()
-    # Normalize multiple spaces to single space
     return re.sub(r"\s+", " ", cleaned).strip()
-
-
-def is_single_letter(text):
-    if not text or text == "Not found":
-        return False
-    # Check if text is a single character and is an English or Bangla letter
-    if len(text) == 1:
-        return bool(re.match(r'[A-Za-z\u0980-\u09FF]', text))
-    return False
 
 
 def clean_bangla_field(text):
     if text == "Not found" or not text:
         return text
-    # Split text into words
     words = text.split()
-    # Keep only words with no English letters (A-Za-z)
     cleaned_words = [word for word in words if not re.search(r'[A-Za-z]', word)]
-    # Join back and normalize spaces
     cleaned = " ".join(cleaned_words).strip()
     return cleaned if cleaned else "Not found"
 
@@ -561,17 +458,13 @@ def clean_bangla_field(text):
 def clean_english_field(text):
     if text == "Not found" or not text:
         return text
-    # Split text into words
     words = text.split()
-    # Keep only words with no Bangla letters (উ0980-উ09FF)
     cleaned_words = [word for word in words if not re.search(r'[\u0980-\u09FF]', word)]
-    # Join back and normalize spaces
     cleaned = " ".join(cleaned_words).strip()
     return cleaned if cleaned else "Not found"
 
 
 def compare_outputs(t1, e1, t2, e2, t3, e3, field):
-    # Normalize "No data found" to "Not found"
     t1 = "Not found" if t1 == "No data found" else t1
     e1 = "Not found" if e1 == "No data found" else e1
     t2 = "Not found" if t2 == "No data found" else t2
@@ -579,92 +472,75 @@ def compare_outputs(t1, e1, t2, e2, t3, e3, field):
     t3 = "Not found" if t3 == "No data found" else t3
     e3 = "Not found" if e3 == "No data found" else e3
 
-    # Clean DateOfBirth field to remove trailing characters
+    outputs_raw = [t1, e1, t2, e2, t3, e3]
+    outputs = []
+    for val in outputs_raw:
+        if not val or val == "":
+            outputs.append("Not found")
+        else:
+            outputs.append(val)
+
     if field == "DateOfBirth":
-        t1 = clean_date_field(t1)
-        e1 = clean_date_field(e1)
-        t2 = clean_date_field(t2)
-        e2 = clean_date_field(e2)
-        t3 = clean_date_field(t3)
-        e3 = clean_date_field(e3)
+        outputs = [clean_date_field(val) for val in outputs]
+        outputs_raw = [clean_date_field(val) for val in outputs_raw]
 
-    # Clean all special characters except dots for all fields
-    t1 = clean_all_special_chars(t1)
-    e1 = clean_all_special_chars(e1)
-    t2 = clean_all_special_chars(t2)
-    e2 = clean_all_special_chars(e2)
-    t3 = clean_all_special_chars(t3)
-    e3 = clean_all_special_chars(e3)
+    outputs_cleaned = [clean_all_special_chars(val) for val in outputs]
+    outputs_raw = [clean_all_special_chars(val) for val in outputs_raw]
 
-    # Apply language-specific cleaning
     if field in ['নাম', 'পিতা', 'মাতা', 'স্বামী', 'স্ত্রী']:
-        t1 = clean_bangla_field(t1)
-        e1 = clean_bangla_field(e1)
-        t2 = clean_bangla_field(t2)
-        e2 = clean_bangla_field(e2)
-        t3 = clean_bangla_field(t3)
-        e3 = clean_bangla_field(e3)
+        outputs_cleaned = [clean_bangla_field(val) for val in outputs_cleaned]
+        outputs_raw = [clean_bangla_field(val) for val in outputs_raw]
     elif field == "Name":
-        t1 = clean_english_field(t1)
-        e1 = clean_english_field(e1)
-        t2 = clean_english_field(t2)
-        e2 = clean_english_field(e2)
-        t3 = clean_english_field(t3)
-        e3 = clean_english_field(e3)
+        outputs_cleaned = [clean_english_field(val) for val in outputs_cleaned]
+        outputs_raw = [clean_english_field(val) for val in outputs_raw]
 
-    # Remove special characters (field-specific)
-    t1_clean = remove_special_chars(t1, field)
-    e1_clean = remove_special_chars(e1, field)
-    t2_clean = remove_special_chars(t2, field)
-    e2_clean = remove_special_chars(e2, field)
-    t3_clean = remove_special_chars(t3, field)
-    e3_clean = remove_special_chars(e3, field)
+    outputs_cleaned = [remove_special_chars(val, field) for val in outputs_cleaned]
 
-    outputs = [t1_clean, e1_clean, t2_clean, e2_clean, t3_clean, e3_clean]
+    outputs_final = []
+    for val in outputs_cleaned:
+        if val != "Not found" and len(val.split()) == 1 and len(val) < 3:
+            outputs_final.append("Not found")
+        else:
+            outputs_final.append(val)
 
-    # Commented debug print statements for six outputs
     # print("\n================= OCR COMPARISON =================")
-    # print(f"{'':<17} t1                        | e1                        | t2                        | e2                        | t3                        | e3")
-    # print(f"{'Raw Outputs':<17}: {t1:<25} | {e1:<25} | {t2:<25} | {e2:<25} | {t3:<25} | {e3}")
-    # print(f"{'Cleaned Outputs':<17}: {t1_clean:<25} | {e1_clean:<25} | {t2_clean:<25} | {e2_clean:<25} | {t3_clean:<25} | {e3_clean}")
+    # print(
+    #     f"{'':<17} t1                        | e1                        | t2                        | e2                        | t3                        | e3")
+    # print(
+    #     f"{'Raw Outputs':<17}: {outputs_raw[0]:<25} | {outputs_raw[1]:<25} | {outputs_raw[2]:<25} | {outputs_raw[3]:<25} | {outputs_raw[4]:<25} | {outputs_raw[5]}")
+    # print(
+    #     f"{'Cleaned Outputs':<17}: {outputs_final[0]:<25} | {outputs_final[1]:<25} | {outputs_final[2]:<25} | {outputs_final[3]:<25} | {outputs_final[4]:<25} | {outputs_final[5]}")
     # print("==================================================\n")
 
-    # Condition 1: All "Not found"
-    if all(val == "Not found" for val in outputs):
+    if all(val == "Not found" for val in outputs_final):
         return "Not found"
 
-    # Filter out "Not found" for comparison
-    valid_outputs = [val for val in outputs if val != "Not found"]
-    valid_raw = [val for val in [t1, e1, t2, e2, t3, e3] if val != "Not found"]
+    valid_outputs = [val for val in outputs_final if val != "Not found"]
+    valid_raw = [val for val in outputs_raw if val != "Not found"]
 
-    # Condition 8: One to five "Not found", one valid output
     if len(valid_outputs) == 1:
-        if is_single_letter(valid_outputs[0]):
-            return "Not found"
         return valid_outputs[0]
 
-    # Condition 2 & 6: Two or more outputs match
     value_counts = {}
     for val in valid_outputs:
         value_counts[val] = value_counts.get(val, 0) + 1
     matching_values = [val for val, count in value_counts.items() if count >= 2]
     if matching_values:
-        return matching_values[0]  # Take any matching value
+        return matching_values[0]
 
-    # Condition 3: Check for pairs (e.g., t1=e2, t2=e3, t3=e1)
     pairs = [
-        (t1_clean, e2_clean, t1, e2),
-        (t2_clean, e3_clean, t2, e3),
-        (t3_clean, e1_clean, t3, e1)
+        (outputs_final[0], outputs_final[3], outputs_raw[0], outputs_raw[3]),
+        (outputs_final[2], outputs_final[5], outputs_raw[2], outputs_raw[5]),
+        (outputs_final[4], outputs_final[1], outputs_raw[4], outputs_raw[1])
     ]
     matching_pairs = [(v1, v2, r1, r2) for v1, v2, r1, r2 in pairs if v1 == v2 and v1 != "Not found"]
-    if len(matching_pairs) >= 1:  # At least one pair matches
+    if len(matching_pairs) >= 1:
         best_value = None
         max_words = 0
         has_special = True
         for v1, _, r1, r2 in matching_pairs:
             words1 = len(v1.split())
-            special1 = bool(re.search(r"[^A-Za-z\s\.\u0980-\u09FF0-9]", r1))  # Exclude dots
+            special1 = bool(re.search(r"[^A-Za-z\s\.\u0980-\u09FF0-9]", r1))
             special2 = bool(re.search(r"[^A-Za-z\s\.\u0980-\u09FF0-9]", r2))
             if not special1 and (not special2 or words1 >= max_words):
                 best_value = v1
@@ -680,18 +556,14 @@ def compare_outputs(t1, e1, t2, e2, t3, e3, field):
         if best_value:
             return best_value
 
-    # Condition 7: Four or five "Not found", one or two have data
-    not_found_count = outputs.count("Not found")
+    not_found_count = outputs_final.count("Not found")
     if not_found_count in [4, 5] and len(valid_outputs) in [1, 2]:
         if len(valid_outputs) == 1:
-            if is_single_letter(valid_outputs[0]):
-                return "Not found"
             return valid_outputs[0]
         words1 = len(valid_outputs[0].split())
         words2 = len(valid_outputs[1].split())
         return valid_outputs[0] if words1 >= words2 else valid_outputs[1]
 
-    # Condition 5: All unique, select one with 3 or 4 words
     unique_outputs = list(set(valid_outputs))
     if len(unique_outputs) == len(valid_outputs):
         for val in unique_outputs:
@@ -699,7 +571,6 @@ def compare_outputs(t1, e1, t2, e2, t3, e3, field):
             if word_count in [3, 4]:
                 return val
 
-    # Fallback: Take the value with the most words
     max_words = 0
     best_val = valid_outputs[0] if valid_outputs else "Not found"
     for val in valid_outputs:
@@ -710,7 +581,6 @@ def compare_outputs(t1, e1, t2, e2, t3, e3, field):
     return best_val
 
 
-# Main Processing Function
 def process_image(image_path):
     # Code 1 Processing
     img = Image.open(image_path)
@@ -750,13 +620,6 @@ def process_image(image_path):
     easyocr_results3 = extract_fields_code1(easyocr_text3)
     easyocr_results3 = infer_name_from_lines(easyocr_text3, easyocr_results3)
 
-    # Optional: Uncomment to display Code 2's side-by-side comparison and merged results
-    # print("\nCode 2 Individual Results:")
-    # print(format_ocr_results(tesseract_results2, easyocr_results2))
-    # print("\nCode 2 Combined Results:")
-    # print(combine_ocr_results(tesseract_results2, easyocr_results2))
-
-    # Combine Results
     final_results = {}
     for field in fields_code1:
         t1 = tesseract_results1.get(field, "Not found")
@@ -767,16 +630,19 @@ def process_image(image_path):
         e3 = easyocr_results3.get(field, "Not found")
         final_results[field] = compare_outputs(t1, e1, t2, e2, t3, e3, field)
 
-    # Print results
     # print("\nFinal Combined Results:")
     # for field, value in final_results.items():
     #     print(f"{field}: {value}")
-    #
+
     return final_results
 
 
+#Example Usage
+# image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/5.jpg"
+# final_results = process_image(image_path)
+
 # Example Usage
 image_path = sys.argv[1]
-#image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/New Images/NID_3.png"
+# #image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/New Images/NID_3.png"
 final_results = process_image(image_path)
 print(json.dumps(final_results, ensure_ascii=False))

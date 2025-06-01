@@ -25,6 +25,7 @@ reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\ea
 
 
 
+
 #------------ rotate part
 class ImgCorrect():
     def __init__(self, img):
@@ -248,7 +249,7 @@ def get_tesseract_ocr(image_path):
     return ocr_text
 
 
-
+reader = easyocr.Reader(['en', 'bn'], gpu=False)
 # Get EasyOCR text from image
 def get_easyocr_text(image_path):
     # reader = easyocr.Reader(['en', 'bn'], gpu=False)
