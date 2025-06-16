@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using IronOcr;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using NidDataExtract_3.Models;
 using System;
 using System.Diagnostics;
+using System.IO.Pipelines;
 using System.Text;
 
 namespace NidDataExtract_3.Controllers
@@ -102,6 +104,59 @@ namespace NidDataExtract_3.Controllers
         //    return Json(NidImageResult);
         //}
 
+        //[HttpPost]
+        //public async Task<IActionResult> ProcessNID([FromBody] byte[] imageBytes, [FromQuery] string version)
+        //{
+        //    if (imageBytes == null || imageBytes.Length == 0)
+        //        return BadRequest("Invalid image data");
+
+        //    try
+        //    {
+        //        // Save the image to wwwroot/uploads/
+        //        string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        //        if (!Directory.Exists(uploadsFolder))
+        //            Directory.CreateDirectory(uploadsFolder);
+
+        //        string fileName = Guid.NewGuid().ToString() + ".jpg"; // Unique file name
+        //        string filePath = Path.Combine(uploadsFolder, fileName);
+
+        //        await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+
+        //        // Call OCR processing
+        //        dynamic result = await RunOCRWithImagePath(filePath, version);
+
+        //        if (!result.IsSuccess)
+        //            return BadRequest(result.Message);
+
+        //        // Prepare response
+        //        var NidImageResult = new NidImageResult
+        //        {
+        //            নাম = result.ObjResponse.নাম,
+        //            Name = result.ObjResponse.Name,
+        //            পিতা = result.ObjResponse.পিতা,
+        //            মাতা = result.ObjResponse.মাতা,
+        //            স্বামী = result.ObjResponse.স্বামী,
+        //            স্ত্রী = result.ObjResponse.স্ত্রী,
+        //            DateOfBirth = result.ObjResponse.DateOfBirth,
+        //            IDNO = result.ObjResponse.IDNO
+        //        };
+
+        //        // Handle fallback for spouse fields
+        //        if (NidImageResult.স্বামী == "No data found")
+        //            NidImageResult.স্বামী = NidImageResult.স্ত্রী;
+        //        if (NidImageResult.স্ত্রী == "No data found")
+        //            NidImageResult.স্ত্রী = NidImageResult.স্বামী;
+
+        //        return Json(NidImageResult);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"Server error: {ex.Message}");
+        //    }
+        //}
+
+
+
         [HttpPost]
         public async Task<IActionResult> ProcessNID(IFormFile nidImage, string version)
         {
@@ -122,7 +177,31 @@ namespace NidDataExtract_3.Controllers
                     await nidImage.CopyToAsync(stream);
                 }
 
-                dynamic result = await RunOCRWithImagePath(filePath,version);
+                //bool result2 = IronOcr.License.IsValidLicense("IRONSUITE.ISHFAQ.RAHMAN9.GMAIL.COM.19895-29B53E8CD7-A4PU5XP-U62D7SSEJT4V-3UZN5H3WTUJC-YNDHDDNBZBJ6-IGVC56X6G4KQ-E5DCEKJJHF3Y-CQ6GHRY3D2TR-UOZTV3-TYBYZWUUFTWPUA-DEPLOYMENT.TRIAL-EVKLAP.TRIAL.EXPIRES.16.JUL.2025");
+                //IronOcr.License.LicenseKey = "IRONSUITE.ISHFAQ.RAHMAN9.GMAIL.COM.19895-29B53E8CD7-A4PU5XP-U62D7SSEJT4V-3UZN5H3WTUJC-YNDHDDNBZBJ6-IGVC56X6G4KQ-E5DCEKJJHF3Y-CQ6GHRY3D2TR-UOZTV3-TYBYZWUUFTWPUA-DEPLOYMENT.TRIAL-EVKLAP.TRIAL.EXPIRES.16.JUL.2025";
+                //var Ocr = new IronTesseract();
+
+                //Ocr.Language =OcrLanguage.English;
+
+                //string extractedText;
+                //using (var input = new OcrInput(filePath))
+                //{
+                //    input.ToGrayScale();
+                //    //input.Contrast();
+                //    //input.EnhanceResolution();
+                //    //input.Deskew();
+                //    //input.Rotate(0);         
+                //    input.DeNoise();
+
+
+                //    var result1 = Ocr.Read(input);
+                //    extractedText = result1.Text;
+                //}
+
+                //var result1 = Ocr.Read(filePath);
+                //string text = result1.Text;
+
+                dynamic result = await RunOCRWithImagePath(filePath, version);
                 if (!result.IsSuccess)
                     return BadRequest(result.Message);
 
@@ -201,13 +280,10 @@ namespace NidDataExtract_3.Controllers
                 return new Response { IsSuccess = false, Status = "Exception", Message = ex.Message };
             }
         }
-
-
-
-
     }
 
     //https://github.com/UB-Mannheim/tesseract/wiki
     //pip install easyocr pytesseract pillow
+    //pip install easyocr pytesseract pillow
     //https://github.com/tesseract-ocr/tessdata/blob/main/ben.traineddata
 }

@@ -9,16 +9,16 @@ import sys
 from PIL import Image
 from math import atan, degrees, radians, sin, cos, fabs
 
-sys.stdout.reconfigure(encoding='utf-8')
-# # Get image path from argument
-if len(sys.argv) < 2:
-    print(json.dumps({"error": "Image path is required"}))
-    sys.exit(1)
+# sys.stdout.reconfigure(encoding='utf-8')
+# # # Get image path from argument
+# if len(sys.argv) < 2:
+#     print(json.dumps({"error": "Image path is required"}))
+#     sys.exit(1)
 
 # Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 #reader = easyocr.Reader(['en', 'bn'], gpu=False)
-reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\easy\model',user_network_directory =r'C:\easy\network')
+#reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\easy\model',user_network_directory =r'C:\easy\network')
 
 # Code 1 Regex Patterns
 fields_code1 = {
@@ -217,9 +217,10 @@ def get_tesseract_ocr(image):
 
 
 def get_easyocr_text(image_path):
-    results = reader.readtext(image_path)
-    ocr_text = "\n".join([text for _, text, _ in results])
-    return ocr_text
+    # results = reader.readtext(image_path)
+    # ocr_text = "\n".join([text for _, text, _ in results])
+    # return ocr_text
+    return ''
 
 
 def contains_english(text):
@@ -464,132 +465,41 @@ def clean_english_field(text):
     return cleaned if cleaned else "Not found"
 
 
-def compare_outputs(t1, e1, t2, e2, t3, e3, field):
-    t1 = "Not found" if t1 == "No data found" else t1
-    e1 = "Not found" if e1 == "No data found" else e1
-    t2 = "Not found" if t2 == "No data found" else t2
-    e2 = "Not found" if e2 == "No data found" else e2
-    t3 = "Not found" if t3 == "No data found" else t3
-    e3 = "Not found" if e3 == "No data found" else e3
+def process_t1(t1, field):
 
-    outputs_raw = [t1, e1, t2, e2, t3, e3]
-    outputs = []
-    for val in outputs_raw:
-        if not val or val == "":
-            outputs.append("Not found")
-        else:
-            outputs.append(val)
+    t1 = "Not found" if t1 == "No data found" else t1
+
+    t1 = "Not found" if not t1 or t1 == "" else t1
 
     if field == "DateOfBirth":
-        outputs = [clean_date_field(val) for val in outputs]
-        outputs_raw = [clean_date_field(val) for val in outputs_raw]
+        t1 = clean_date_field(t1)
 
-    outputs_cleaned = [clean_all_special_chars(val) for val in outputs]
-    outputs_raw = [clean_all_special_chars(val) for val in outputs_raw]
+    t1 = clean_all_special_chars(t1)
 
     if field in ['নাম', 'পিতা', 'মাতা', 'স্বামী', 'স্ত্রী']:
-        outputs_cleaned = [clean_bangla_field(val) for val in outputs_cleaned]
-        outputs_raw = [clean_bangla_field(val) for val in outputs_raw]
+        t1 = clean_bangla_field(t1)
     elif field == "Name":
-        outputs_cleaned = [clean_english_field(val) for val in outputs_cleaned]
-        outputs_raw = [clean_english_field(val) for val in outputs_raw]
+        t1 = clean_english_field(t1)
 
-    outputs_cleaned = [remove_special_chars(val, field) for val in outputs_cleaned]
+    t1 = remove_special_chars(t1, field)
 
-    outputs_final = []
-    for val in outputs_cleaned:
-        if val != "Not found" and len(val.split()) == 1 and len(val) < 3:
-            outputs_final.append("Not found")
-        else:
-            outputs_final.append(val)
+    if t1 != "Not found" and len(t1.split()) == 1 and len(t1) < 3:
+        t1 = "Not found"
 
-    # print("\n================= OCR COMPARISON =================")
-    # print(
-    #     f"{'':<17} t1                        | e1                        | t2                        | e2                        | t3                        | e3")
-    # print(
-    #     f"{'Raw Outputs':<17}: {outputs_raw[0]:<25} | {outputs_raw[1]:<25} | {outputs_raw[2]:<25} | {outputs_raw[3]:<25} | {outputs_raw[4]:<25} | {outputs_raw[5]}")
-    # print(
-    #     f"{'Cleaned Outputs':<17}: {outputs_final[0]:<25} | {outputs_final[1]:<25} | {outputs_final[2]:<25} | {outputs_final[3]:<25} | {outputs_final[4]:<25} | {outputs_final[5]}")
-    # print("==================================================\n")
-
-    if all(val == "Not found" for val in outputs_final):
-        return "Not found"
-
-    valid_outputs = [val for val in outputs_final if val != "Not found"]
-    valid_raw = [val for val in outputs_raw if val != "Not found"]
-
-    if len(valid_outputs) == 1:
-        return valid_outputs[0]
-
-    value_counts = {}
-    for val in valid_outputs:
-        value_counts[val] = value_counts.get(val, 0) + 1
-    matching_values = [val for val, count in value_counts.items() if count >= 2]
-    if matching_values:
-        return matching_values[0]
-
-    pairs = [
-        (outputs_final[0], outputs_final[3], outputs_raw[0], outputs_raw[3]),
-        (outputs_final[2], outputs_final[5], outputs_raw[2], outputs_raw[5]),
-        (outputs_final[4], outputs_final[1], outputs_raw[4], outputs_raw[1])
-    ]
-    matching_pairs = [(v1, v2, r1, r2) for v1, v2, r1, r2 in pairs if v1 == v2 and v1 != "Not found"]
-    if len(matching_pairs) >= 1:
-        best_value = None
-        max_words = 0
-        has_special = True
-        for v1, _, r1, r2 in matching_pairs:
-            words1 = len(v1.split())
-            special1 = bool(re.search(r"[^A-Za-z\s\.\u0980-\u09FF0-9]", r1))
-            special2 = bool(re.search(r"[^A-Za-z\s\.\u0980-\u09FF0-9]", r2))
-            if not special1 and (not special2 or words1 >= max_words):
-                best_value = v1
-                max_words = words1
-                has_special = special1
-            elif not special2 and words1 >= max_words:
-                best_value = v1
-                max_words = words1
-                has_special = special2
-            elif words1 > max_words:
-                best_value = v1
-                max_words = words1
-        if best_value:
-            return best_value
-
-    not_found_count = outputs_final.count("Not found")
-    if not_found_count in [4, 5] and len(valid_outputs) in [1, 2]:
-        if len(valid_outputs) == 1:
-            return valid_outputs[0]
-        words1 = len(valid_outputs[0].split())
-        words2 = len(valid_outputs[1].split())
-        return valid_outputs[0] if words1 >= words2 else valid_outputs[1]
-
-    unique_outputs = list(set(valid_outputs))
-    if len(unique_outputs) == len(valid_outputs):
-        for val in unique_outputs:
-            word_count = len(val.split())
-            if word_count in [3, 4]:
-                return val
-
-    max_words = 0
-    best_val = valid_outputs[0] if valid_outputs else "Not found"
-    for val in valid_outputs:
-        words = len(val.split())
-        if words > max_words:
-            max_words = words
-            best_val = val
-    return best_val
+    return t1
 
 
 def process_image(image_path):
     # Code 1 Processing
     img = Image.open(image_path)
     tesseract_text1 = pytesseract.image_to_string(img, lang='ben+eng')
+    # print(tesseract_text1)
     tesseract_text1 = clean_header_text(tesseract_text1)
     tesseract_results1 = extract_fields_code1(tesseract_text1)
     tesseract_results1 = infer_name_from_lines(tesseract_text1, tesseract_results1)
 
     results = get_easyocr_text(image_path)
+    # print(results)
     easyocr_text1 = results
     easyocr_text1 = clean_header_text(easyocr_text1)
     easyocr_results1 = extract_fields_code1(easyocr_text1)
@@ -600,9 +510,11 @@ def process_image(image_path):
     rotated_img = dskew(img_cv2)
     preprocessed_img, _ = preprocess_before_crop(rotated_img)
     tesseract_text2 = get_tesseract_ocr(preprocessed_img)
+    # print(tesseract_text2)
     tesseract_results2 = extract_fields_code2(tesseract_text2)
 
     easyocr_text2 = get_easyocr_text(preprocessed_img)
+    # print(easyocr_text2)
     easyocr_results2 = extract_fields_code2(easyocr_text2)
 
     # Code 3 Processing with Preprocessing just rotate
@@ -610,11 +522,13 @@ def process_image(image_path):
     rotated_img2 = dskew(img3)
     rotated_img3 = Image.fromarray(rotated_img2)
     tesseract_text3 = pytesseract.image_to_string(rotated_img3, lang='ben+eng')
+    # print(tesseract_text3)
     tesseract_text3 = clean_header_text(tesseract_text3)
     tesseract_results3 = extract_fields_code1(tesseract_text3)
     tesseract_results3 = infer_name_from_lines(tesseract_text3, tesseract_results3)
 
     results = get_easyocr_text(rotated_img2)
+    # print(results)
     easyocr_text3 = results
     easyocr_text3 = clean_header_text(easyocr_text3)
     easyocr_results3 = extract_fields_code1(easyocr_text3)
@@ -628,7 +542,7 @@ def process_image(image_path):
         e2 = easyocr_results2.get(field, "Not found")
         t3 = tesseract_results3.get(field, "Not found")
         e3 = easyocr_results3.get(field, "Not found")
-        final_results[field] = compare_outputs(t1, e1, t2, e2, t3, e3, field)
+        final_results[field] = process_t1(t2,field)
 
     # print("\nFinal Combined Results:")
     # for field, value in final_results.items():
@@ -638,11 +552,10 @@ def process_image(image_path):
 
 
 #Example Usage
-# image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/5.jpg"
-# final_results = process_image(image_path)
+#image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/13.jpg"
+#final_results = process_image(image_path)
 
 # Example Usage
 image_path = sys.argv[1]
-# #image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/New Images/NID_3.png"
 final_results = process_image(image_path)
 print(json.dumps(final_results, ensure_ascii=False))

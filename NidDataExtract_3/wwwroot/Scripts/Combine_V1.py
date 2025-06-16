@@ -535,7 +535,7 @@ def main(image_path):
     # Combine outputs with a separator
 
 
-img = cv2.imread(img_path)
+img = cv2.imread(sys.argv[1])
 rotate = dskew(img)
 preprocessed_image, original_image = preprocess_before_crop(rotate)
 result = main(preprocessed_image)
