@@ -514,32 +514,42 @@ def compare_outputs(e1, e2, e3, field):
     if len(valid_outputs) == 1:
         return valid_outputs[0]
 
-    value_counts = {}
-    for val in valid_outputs:
-        value_counts[val] = value_counts.get(val, 0) + 1
-    matching_values = [val for val, count in value_counts.items() if count >= 2]
-    if matching_values:
-        return matching_values[0]
+    # Find common substrings to identify matches
+    def find_longest_common_substring(str1, str2):
+        str1, str2 = str1.lower(), str2.lower()
+        m, n = len(str1), len(str2)
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        length, end_pos = 0, 0
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if str1[i-1] == str2[j-1]:
+                    dp[i][j] = dp[i-1][j-1] + 1
+                    if dp[i][j] > length:
+                        length = dp[i][j]
+                        end_pos = i
+        return str1[end_pos - length:end_pos] if length >= 3 else ""
 
-    if len(valid_outputs) == 2:
-        words1 = len(valid_outputs[0].split())
-        words2 = len(valid_outputs[1].split())
-        return valid_outputs[0] if words1 >= words2 else valid_outputs[1]
+    # Check for common substrings among pairs
+    pairs = [(0, 1, valid_outputs[0], valid_outputs[1]), (0, 2, valid_outputs[0], valid_outputs[2]), (1, 2, valid_outputs[1], valid_outputs[2])] if len(valid_outputs) == 3 else []
+    matching_outputs = []
+    common_substring = ""
 
-    unique_outputs = list(set(valid_outputs))
-    if len(unique_outputs) == len(valid_outputs):
-        for val in unique_outputs:
-            word_count = len(val.split())
-            if word_count in [3, 4]:
-                return val
+    for i, j, val1, val2 in pairs:
+        substring = find_longest_common_substring(val1, val2)
+        if substring and len(substring) >= 3:  # Consider substrings of 3+ chars as matches
+            common_substring = substring
+            if val1.lower().find(substring) != -1 and val1 not in matching_outputs:
+                matching_outputs.append(val1)
+            if val2.lower().find(substring) != -1 and val2 not in matching_outputs:
+                matching_outputs.append(val2)
 
-    max_words = 0
-    best_val = valid_outputs[0] if valid_outputs else "Not found"
-    for val in valid_outputs:
-        words = len(val.split())
-        if words > max_words:
-            max_words = words
-            best_val = val
+    # If we have matching outputs, select the one with most words, then most characters
+    if matching_outputs:
+        best_val = max(matching_outputs, key=lambda x: (len(x.split()), len(x.replace(" ", ""))))
+        return best_val
+
+    # If no matches or all unique, select the one with most words, then most characters
+    best_val = max(valid_outputs, key=lambda x: (len(x.split()), len(x.replace(" ", ""))))
     return best_val
 
 
