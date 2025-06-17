@@ -9,11 +9,11 @@ import sys
 from PIL import Image
 from math import atan, degrees, radians, sin, cos, fabs
 
-# sys.stdout.reconfigure(encoding='utf-8')
-# # # Get image path from argument
-# if len(sys.argv) < 2:
-#     print(json.dumps({"error": "Image path is required"}))
-#     sys.exit(1)
+sys.stdout.reconfigure(encoding='utf-8')
+# # Get image path from argument
+if len(sys.argv) < 2:
+    print(json.dumps({"error": "Image path is required"}))
+    sys.exit(1)
 
 # Tesseract path
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -465,28 +465,82 @@ def clean_english_field(text):
     return cleaned if cleaned else "Not found"
 
 
-def process_t1(t1, field):
+def compare_outputs(e1, e2, e3, field):
+    e1 = "Not found" if e1 == "No data found" else e1
+    e2 = "Not found" if e2 == "No data found" else e2
+    e3 = "Not found" if e3 == "No data found" else e3
 
-    t1 = "Not found" if t1 == "No data found" else t1
-
-    t1 = "Not found" if not t1 or t1 == "" else t1
+    outputs_raw = [e1, e2, e3]
+    outputs = []
+    for val in outputs_raw:
+        if not val or val == "":
+            outputs.append("Not found")
+        else:
+            outputs.append(val)
 
     if field == "DateOfBirth":
-        t1 = clean_date_field(t1)
+        outputs = [clean_date_field(val) for val in outputs]
+        outputs_raw = [clean_date_field(val) for val in outputs_raw]
 
-    t1 = clean_all_special_chars(t1)
+    outputs_cleaned = [clean_all_special_chars(val) for val in outputs]
+    outputs_raw = [clean_all_special_chars(val) for val in outputs_raw]
 
     if field in ['নাম', 'পিতা', 'মাতা', 'স্বামী', 'স্ত্রী']:
-        t1 = clean_bangla_field(t1)
+        outputs_cleaned = [clean_bangla_field(val) for val in outputs_cleaned]
+        outputs_raw = [clean_bangla_field(val) for val in outputs_raw]
     elif field == "Name":
-        t1 = clean_english_field(t1)
+        outputs_cleaned = [clean_english_field(val) for val in outputs_cleaned]
+        outputs_raw = [clean_english_field(val) for val in outputs_raw]
 
-    t1 = remove_special_chars(t1, field)
+    outputs_cleaned = [remove_special_chars(val, field) for val in outputs_cleaned]
 
-    if t1 != "Not found" and len(t1.split()) == 1 and len(t1) < 3:
-        t1 = "Not found"
+    outputs_final = []
+    for val in outputs_cleaned:
+        if val != "Not found" and len(val.split()) == 1 and len(val) < 3:
+            outputs_final.append("Not found")
+        else:
+            outputs_final.append(val)
 
-    return t1
+    # print("\n================= OCR COMPARISON =================")
+    # print(f"{'':<17} e1                        | e2                        | e3")
+    # print(f"{'Raw Outputs':<17}: {outputs_raw[0]:<25} | {outputs_raw[1]:<25} | {outputs_raw[2]}")
+    # print(f"{'Cleaned Outputs':<17}: {outputs_final[0]:<25} | {outputs_final[1]:<25} | {outputs_final[2]}")
+    # print("==================================================\n")
+
+    if all(val == "Not found" for val in outputs_final):
+        return "Not found"
+
+    valid_outputs = [val for val in outputs_final if val != "Not found"]
+    if len(valid_outputs) == 1:
+        return valid_outputs[0]
+
+    value_counts = {}
+    for val in valid_outputs:
+        value_counts[val] = value_counts.get(val, 0) + 1
+    matching_values = [val for val, count in value_counts.items() if count >= 2]
+    if matching_values:
+        return matching_values[0]
+
+    if len(valid_outputs) == 2:
+        words1 = len(valid_outputs[0].split())
+        words2 = len(valid_outputs[1].split())
+        return valid_outputs[0] if words1 >= words2 else valid_outputs[1]
+
+    unique_outputs = list(set(valid_outputs))
+    if len(unique_outputs) == len(valid_outputs):
+        for val in unique_outputs:
+            word_count = len(val.split())
+            if word_count in [3, 4]:
+                return val
+
+    max_words = 0
+    best_val = valid_outputs[0] if valid_outputs else "Not found"
+    for val in valid_outputs:
+        words = len(val.split())
+        if words > max_words:
+            max_words = words
+            best_val = val
+    return best_val
 
 
 def process_image(image_path):
@@ -542,7 +596,7 @@ def process_image(image_path):
         e2 = easyocr_results2.get(field, "Not found")
         t3 = tesseract_results3.get(field, "Not found")
         e3 = easyocr_results3.get(field, "Not found")
-        final_results[field] = process_t1(e3,field)
+        final_results[field] = compare_outputs(e1,e2,e3,field)
 
     # print("\nFinal Combined Results:")
     #for field, value in final_results.items():

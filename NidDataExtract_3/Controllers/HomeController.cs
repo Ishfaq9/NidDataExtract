@@ -158,7 +158,7 @@ namespace NidDataExtract_3.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> ProcessNID(IFormFile nidImage, string version)
+        public async Task<IActionResult> ProcessNID(IFormFile nidImage, string version, string formId)
         {
             if (nidImage == null || nidImage.Length == 0)
                 return BadRequest("Invalid image");
@@ -201,7 +201,7 @@ namespace NidDataExtract_3.Controllers
                 //var result1 = Ocr.Read(filePath);
                 //string text = result1.Text;
 
-                dynamic result = await RunOCRWithImagePath(filePath, version);
+                dynamic result = await RunOCRWithImagePath(filePath, version, formId);
                 if (!result.IsSuccess)
                     return BadRequest(result.Message);
 
@@ -232,7 +232,7 @@ namespace NidDataExtract_3.Controllers
             }
         }
 
-        private async Task<Response> RunOCRWithImagePath(string imagePath, string version)
+        private async Task<Response> RunOCRWithImagePath(string imagePath, string version, string formId)
         {
             if (string.IsNullOrWhiteSpace(imagePath))
                 return new Response { IsSuccess = false, Status = "Failed", Message = "Image path is required." };
@@ -240,7 +240,19 @@ namespace NidDataExtract_3.Controllers
             //string scriptPath = $"D:\\source\\NidDataExtract_3\\NidDataExtract_3\\Scripts\\Combine_{version.ToUpper()}.py";
             //string scriptPath = Path.Combine(_env.ContentRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
             //string scriptPath = "D:\\source\\NidDataExtract_3\\NidDataExtract_3\\Scripts\\combine_Tesse_easy_4.py";
-            string scriptPath = Path.Combine(_env.WebRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
+            string scriptPath;
+            if (formId== "form1")
+                {
+                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_tesse_preprocess.py");
+            }
+            else if (formId == "form2")
+            {
+                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_easyOcr_preprocess.py");
+            }
+            else
+            {
+                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
+            }
 
             string pythonExe = "C:\\Program Files\\Python312\\python.exe";
 

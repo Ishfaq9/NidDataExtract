@@ -4,7 +4,7 @@
 <h2 class="mb-4">Bangladesh NID OCR</h2>
 
 <div class="row">
-    <div class="col-2">
+    <div class="col-12">
         <div class="mb-1">
             <label for="version" class="form-label">Select OCR Version:</label>
             <select name="version" id="version" class="form-select">
@@ -16,7 +16,7 @@
     </div>
 </div>
 
-<div class="row">
+@* <div class="row">
     <div class="col-8">
         <form id="nidForm" enctype="multipart/form-data">
             <div class="mb-3">
@@ -135,4 +135,149 @@
             });
         });
     </script>
+} *@
+
+
+<div class="row">
+    <div class="col-4">
+        <form id="nidForm" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form1" />
+                <label for="nidImage" class="form-label">Upload NID Image (Tesseract):</label>
+                <input type="file" name="nidImage" id="nidImage" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview')" />
+                <img id="preview" style="width: 100%; height: auto; display: none; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <div id="loading" class="mt-3 text-warning" style="display:none;">🔄 Processing, please wait...</div>
+        </form>
+
+        <div id="resultForm" style="display: none;">
+            <h5 class="mb-3">OCR Result (Tesseract) </h5>
+      @*       <input type="text" id="BengaliName" class="form-control form-control-sm mb-2" placeholder="নাম" readonly /> *@
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+@*             <input type="text" id="FatherName" class="form-control form-control-sm mb-2" placeholder="পিতা" readonly />
+            <input type="text" id="MotherName" class="form-control form-control-sm mb-2" placeholder="মাতা" readonly />
+            <input type="text" id="HusbandName" class="form-control form-control-sm mb-2" placeholder="স্বামী/স্ত্রী" readonly /> *@
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+
+    <!-- Form 2 -->
+    <div class="col-4">
+        <form id="nidForm2" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form2" />
+            <label>Upload NID Image (Easy Ocr):</label>
+            <input type="file" name="nidImage" id="nidImage2" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview2')" />
+            <img id="preview2" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-secondary">Submit</button>
+            <div id="loading2" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
+        </form>
+        <div id="resultForm2" style="display: none;">
+            <h5>OCR Result (Easy Ocr)</h5>
+        @*     <input type="text" id="BengaliName2" class="form-control form-control-sm mb-2" placeholder="নাম" readonly /> *@
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName2" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+@*             <input type="text" id="FatherName2" class="form-control form-control-sm mb-2" placeholder="পিতা" readonly />
+            <input type="text" id="MotherName2" class="form-control form-control-sm mb-2" placeholder="মাতা" readonly />
+            <input type="text" id="HusbandName2" class="form-control form-control-sm mb-2" placeholder="স্বামী/স্ত্রী" readonly /> *@
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB2" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber2" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+
+    <!-- Form 3 -->
+    <div class="col-4">
+        <form id="nidForm3" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form3" />
+            <label>Upload NID Image (Combine two):</label>
+            <input type="file" name="nidImage" id="nidImage3" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview3')" />
+            <img id="preview3" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-success">Submit</button>
+            <div id="loading3" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
+        </form>
+        <div id="resultForm3" style="display: none;">
+            <h5>OCR Result (Combine two)</h5>
+        @*     <input type="text" id="BengaliName3" class="form-control form-control-sm mb-2" placeholder="নাম" readonly /> *@
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName3" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+@*             <input type="text" id="FatherName3" class="form-control form-control-sm mb-2" placeholder="পিতা" readonly />
+            <input type="text" id="MotherName3" class="form-control form-control-sm mb-2" placeholder="মাতা" readonly />
+            <input type="text" id="HusbandName3" class="form-control form-control-sm mb-2" placeholder="স্বামী/স্ত্রী" readonly /> *@
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB3" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber3" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        function previewImage(event, previewId) {
+            const reader = new FileReader();
+            reader.onload = function () {
+                const output = document.getElementById(previewId);
+                output.src = reader.result;
+                output.style.display = 'block';
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        function setupForm(formId, inputId, loadingId, resultId, prefix) {
+            $(`#${formId}`).on('submit', function (e) {
+                e.preventDefault();
+
+                const fileInput = document.getElementById(inputId);
+                const version = document.getElementById('version')?.value || 'v1';
+                const formIdInput = document.querySelector(`#${formId} input[name='formId']`).value;
+
+                if (fileInput.files.length === 0) {
+                    alert("Please select an image.");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("nidImage", fileInput.files[0]);
+                formData.append("version", version);
+                formData.append("formId", formIdInput);
+
+                $(`#${loadingId}`).show();
+                $(`#${resultId}`).hide();
+
+                $.ajax({
+                    url: '/Home/ProcessNID',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        $(`#${loadingId}`).hide();
+                        // $(`#BengaliName${prefix}`).val(data["নাম"]);
+                        $(`#EnglishName${prefix}`).val(data.name);
+                        // $(`#FatherName${prefix}`).val(data["পিতা"]);
+                        // $(`#MotherName${prefix}`).val(data["মাতা"]);
+                        // $(`#HusbandName${prefix}`).val(data["স্বামী"] || data["স্ত্রী"] || '');
+                        $(`#DOB${prefix}`).val(data.dateOfBirth);
+                        $(`#NIDNumber${prefix}`).val(data.idno);
+                        $(`#${resultId}`).show();
+                    },
+                    error: function () {
+                        $(`#${loadingId}`).hide();
+                        alert("❌ Error processing image.");
+                    }
+                });
+            });
+        }
+
+        // Setup all 3 forms
+        setupForm('nidForm', 'nidImage', 'loading', 'resultForm', '');
+        setupForm('nidForm2', 'nidImage2', 'loading2', 'resultForm2', '2');
+        setupForm('nidForm3', 'nidImage3', 'loading3', 'resultForm3', '3');
+    </script>
 }
+
