@@ -32,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\scripts\" />
+    <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
 </Project>

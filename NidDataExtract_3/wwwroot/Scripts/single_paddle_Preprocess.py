@@ -1,3 +1,5 @@
+import warnings
+
 import cv2
 import numpy as np
 import os
@@ -8,17 +10,37 @@ import json
 import sys
 from PIL import Image
 from math import atan, degrees, radians, sin, cos, fabs
+import warnings
+from paddleocr import PaddleOCR
+from datetime import datetime
+
+det_model_dir_path = "E:/my_paddleocr_models/.paddleocr/whl/det/en/en_PP-OCRv3_det_infer"
+rec_model_dir_path = "E:/my_paddleocr_models/.paddleocr/whl/rec/en/en_PP-OCRv4_rec_infer"
+cls_model_dir_path = "E:/my_paddleocr_models/.paddleocr/whl/cls/ch_ppocr_mobile_v2.0_cls_infer"
 
 sys.stdout.reconfigure(encoding='utf-8')
-# # Get image path from argument
+
 if len(sys.argv) < 2:
     print(json.dumps({"error": "Image path is required"}))
     sys.exit(1)
 
-# Tesseract path
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-#reader = easyocr.Reader(['en', 'bn'], gpu=False)
-#reader = easyocr.Reader(['en', 'bn'],gpu=False, model_storage_directory =r'C:\easy\model',user_network_directory =r'C:\easy\network')
+image_path = sys.argv[1]
+if not os.path.exists(image_path):
+    print(json.dumps({"error": f"Image file not found: {image_path}"}))
+    sys.exit(1)
+
+warnings.filterwarnings("ignore", category=UserWarning, module="paddle.utils.cpp_extension")
+
+# Initialize PaddleOCR with these precise model directory paths
+ocr = PaddleOCR(
+    use_angle_cls=True,
+    lang='en', # Keep lang='en' as your det and rec models are English
+    use_gpu=False,
+    show_log=False,
+    det_model_dir=det_model_dir_path,
+    rec_model_dir=rec_model_dir_path,
+    cls_model_dir=cls_model_dir_path
+)
 
 # Code 1 Regex Patterns
 fields_code1 = {
@@ -212,8 +234,16 @@ def preprocess_before_crop(scan_path):
 
 def get_tesseract_ocr(image):
     img = Image.fromarray(image)
-    ocr_text = pytesseract.image_to_string(img, lang='eng')
+    ocr_text = pytesseract.image_to_string(img, lang='ben+eng')
     return ocr_text
+
+def get_paddle_ocr(image):
+    results = ocr.ocr(image_path, cls=True)
+    all_text = ""
+    for line in results[0]:
+        text = line[1][0]
+        all_text += text + "\n"
+    return all_text
 
 
 def get_easyocr_text(image_path):
@@ -433,11 +463,34 @@ def remove_special_chars(text, field):
 def clean_date_field(text):
     if text == "Not found" or not text:
         return text
-    date_pattern = r'^(\d{1,2}\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s*\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})\s*(.*)$'
-    match = re.match(date_pattern, text, re.IGNORECASE)
+    # Define month mapping for standardization
+    month_map = {
+        'jan': 'Jan', 'feb': 'Feb', 'mar': 'Mar', 'apr': 'Apr',
+        'may': 'May', 'jun': 'Jun', 'jul': 'Jul', 'aug': 'Aug',
+        'sep': 'Sep', 'oct': 'Oct', 'nov': 'Nov', 'dec': 'Dec',
+        'january': 'Jan', 'february': 'Feb', 'march': 'Mar', 'april': 'Apr',
+        'may': 'May', 'june': 'Jun', 'july': 'Jul', 'august': 'Aug',
+        'september': 'Sep', 'october': 'Oct', 'november': 'Nov', 'december': 'Dec'
+    }
+    # Pattern to match various date formats: DDMMMYYYY, DD MMM YYYY, DDMMM YYYY, DD-MMM-YYYY, DD/MM/YYYY
+    date_pattern = r'(\d{1,2})\s*[-/\s]?([A-Za-z]+)\s*[-/\s]?(\d{4})'
+    match = re.match(date_pattern, text.strip(), re.IGNORECASE)
     if match:
-        return match.group(1).strip()
-    return text
+        day, month, year = match.groups()
+        # Standardize month to first three letters
+        month = month[:3].lower()
+        if month in month_map:
+            month = month_map[month]
+        else:
+            return "Invalid"
+        current_year = datetime.now().year
+        if not (1800 <= int(year) <= current_year - 18):
+            return "Invalid"
+        day = int(day)
+        if not (1 <= day <= 31):
+            return "Invalid"
+        return f"{day} {month} {year}"
+    return "Invalid"
 
 
 def clean_all_special_chars(text):
@@ -462,151 +515,48 @@ def clean_english_field(text):
     words = text.split()
     cleaned_words = [word for word in words if not re.search(r'[\u0980-\u09FF]', word)]
     cleaned = " ".join(cleaned_words).strip()
+    cleaned = re.sub(r'\.(\w)', r'. \1', cleaned)
     return cleaned if cleaned else "Not found"
 
 
-def compare_outputs(e1, e2, e3, field):
+def process_output(e1, field):
     e1 = "Not found" if e1 == "No data found" else e1
-    e2 = "Not found" if e2 == "No data found" else e2
-    e3 = "Not found" if e3 == "No data found" else e3
-
-    outputs_raw = [e1, e2, e3]
-    outputs = []
-    for val in outputs_raw:
-        if not val or val == "":
-            outputs.append("Not found")
-        else:
-            outputs.append(val)
+    if not e1 or e1 == "":
+        e1 = "Not found"
 
     if field == "DateOfBirth":
-        outputs = [clean_date_field(val) for val in outputs]
-        outputs_raw = [clean_date_field(val) for val in outputs_raw]
+        e1 = clean_date_field(e1)
 
-    outputs_cleaned = [clean_all_special_chars(val) for val in outputs]
-    outputs_raw = [clean_all_special_chars(val) for val in outputs_raw]
+    e1_cleaned = clean_all_special_chars(e1)
 
     if field in ['নাম', 'পিতা', 'মাতা', 'স্বামী', 'স্ত্রী']:
-        outputs_cleaned = [clean_bangla_field(val) for val in outputs_cleaned]
-        outputs_raw = [clean_bangla_field(val) for val in outputs_raw]
+        e1_cleaned = clean_bangla_field(e1_cleaned)
     elif field == "Name":
-        outputs_cleaned = [clean_english_field(val) for val in outputs_cleaned]
-        outputs_raw = [clean_english_field(val) for val in outputs_raw]
+        e1_cleaned = clean_english_field(e1_cleaned)
 
-    outputs_cleaned = [remove_special_chars(val, field) for val in outputs_cleaned]
 
-    outputs_final = []
-    for val in outputs_cleaned:
-        if val != "Not found" and len(val.split()) == 1 and len(val) < 3:
-            outputs_final.append("Not found")
-        else:
-            outputs_final.append(val)
+    e1_cleaned = remove_special_chars(e1_cleaned, field)
 
-    # print("\n================= OCR COMPARISON =================")
-    # print(f"{'':<17} e1                        | e2                        | e3")
-    # print(f"{'Raw Outputs':<17}: {outputs_raw[0]:<25} | {outputs_raw[1]:<25} | {outputs_raw[2]}")
-    # print(f"{'Cleaned Outputs':<17}: {outputs_final[0]:<25} | {outputs_final[1]:<25} | {outputs_final[2]}")
-    # print("==================================================\n")
-
-    if all(val == "Not found" for val in outputs_final):
+    if e1_cleaned != "Not found" and len(e1_cleaned.split()) == 1 and len(e1_cleaned) < 3:
         return "Not found"
 
-    valid_outputs = [val for val in outputs_final if val != "Not found"]
-    if len(valid_outputs) == 1:
-        return valid_outputs[0]
-
-    # Find common substrings to identify matches
-    def find_longest_common_substring(str1, str2):
-        str1, str2 = str1.lower(), str2.lower()
-        m, n = len(str1), len(str2)
-        dp = [[0] * (n + 1) for _ in range(m + 1)]
-        length, end_pos = 0, 0
-        for i in range(1, m + 1):
-            for j in range(1, n + 1):
-                if str1[i-1] == str2[j-1]:
-                    dp[i][j] = dp[i-1][j-1] + 1
-                    if dp[i][j] > length:
-                        length = dp[i][j]
-                        end_pos = i
-        return str1[end_pos - length:end_pos] if length >= 3 else ""
-
-    # Check for common substrings among pairs
-    pairs = [(0, 1, valid_outputs[0], valid_outputs[1]), (0, 2, valid_outputs[0], valid_outputs[2]), (1, 2, valid_outputs[1], valid_outputs[2])] if len(valid_outputs) == 3 else []
-    matching_outputs = []
-    common_substring = ""
-
-    for i, j, val1, val2 in pairs:
-        substring = find_longest_common_substring(val1, val2)
-        if substring and len(substring) >= 3:  # Consider substrings of 3+ chars as matches
-            common_substring = substring
-            if val1.lower().find(substring) != -1 and val1 not in matching_outputs:
-                matching_outputs.append(val1)
-            if val2.lower().find(substring) != -1 and val2 not in matching_outputs:
-                matching_outputs.append(val2)
-
-    # If we have matching outputs, select the one with most words, then most characters
-    if matching_outputs:
-        best_val = max(matching_outputs, key=lambda x: (len(x.split()), len(x.replace(" ", ""))))
-        return best_val
-
-    # If no matches or all unique, select the one with most words, then most characters
-    best_val = max(valid_outputs, key=lambda x: (len(x.split()), len(x.replace(" ", ""))))
-    return best_val
+    return e1_cleaned
 
 
 def process_image(image_path):
     # Code 1 Processing
-    img = Image.open(image_path)
-    tesseract_text1 = pytesseract.image_to_string(img, lang='eng')
-    # print(tesseract_text1)
-    tesseract_text1 = clean_header_text(tesseract_text1)
-    tesseract_results1 = extract_fields_code1(tesseract_text1)
-    tesseract_results1 = infer_name_from_lines(tesseract_text1, tesseract_results1)
+    img = cv2.imread(image_path)
+    paddle_text1 = get_paddle_ocr(img)
+    #print(paddle_text1)
+    paddle_text1 = clean_header_text(paddle_text1)
+    paddle_results1 = extract_fields_code2(paddle_text1)
+    paddle_results1 = infer_name_from_lines(paddle_text1, paddle_results1)
 
-    results = get_easyocr_text(image_path)
-    # print(results)
-    easyocr_text1 = results
-    easyocr_text1 = clean_header_text(easyocr_text1)
-    easyocr_results1 = extract_fields_code1(easyocr_text1)
-    easyocr_results1 = infer_name_from_lines(easyocr_text1, easyocr_results1)
-
-    # Code 2 Processing with Preprocessing
-    img_cv2 = cv2.imread(image_path)
-    rotated_img = dskew(img_cv2)
-    preprocessed_img, _ = preprocess_before_crop(rotated_img)
-    tesseract_text2 = get_tesseract_ocr(preprocessed_img)
-    # print(tesseract_text2)
-    tesseract_results2 = extract_fields_code2(tesseract_text2)
-
-    easyocr_text2 = get_easyocr_text(preprocessed_img)
-    # print(easyocr_text2)
-    easyocr_results2 = extract_fields_code2(easyocr_text2)
-
-    # Code 3 Processing with Preprocessing just rotate
-    img3 = cv2.imread(image_path)
-    rotated_img2 = dskew(img3)
-    rotated_img3 = Image.fromarray(rotated_img2)
-    tesseract_text3 = pytesseract.image_to_string(rotated_img3, lang='eng')
-    # print(tesseract_text3)
-    tesseract_text3 = clean_header_text(tesseract_text3)
-    tesseract_results3 = extract_fields_code1(tesseract_text3)
-    tesseract_results3 = infer_name_from_lines(tesseract_text3, tesseract_results3)
-
-    results = get_easyocr_text(rotated_img2)
-    # print(results)
-    easyocr_text3 = results
-    easyocr_text3 = clean_header_text(easyocr_text3)
-    easyocr_results3 = extract_fields_code1(easyocr_text3)
-    easyocr_results3 = infer_name_from_lines(easyocr_text3, easyocr_results3)
 
     final_results = {}
     for field in fields_code1:
-        t1 = tesseract_results1.get(field, "Not found")
-        e1 = easyocr_results1.get(field, "Not found")
-        t2 = tesseract_results2.get(field, "Not found")
-        e2 = easyocr_results2.get(field, "Not found")
-        t3 = tesseract_results3.get(field, "Not found")
-        e3 = easyocr_results3.get(field, "Not found")
-        final_results[field] = compare_outputs(t1,t2,t3,field)
+        t1 = paddle_results1.get(field, "Not found")
+        final_results[field] = process_output(t1,field)
 
     # print("\nFinal Combined Results:")
     # for field, value in final_results.items():
@@ -616,10 +566,12 @@ def process_image(image_path):
 
 
 #Example Usage
-#image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/13.jpg"
-#final_results = process_image(image_path)
+# image_path = "C:/Users/ishfaq.rahman/Desktop/NID Images/New Images/NID_2.png"
+# final_results = process_image(image_path)
 
-# Example Usage
-image_path = sys.argv[1]
-final_results = process_image(image_path)
-print(json.dumps(final_results, ensure_ascii=False))
+try:
+    final_results = process_image(image_path)
+    print(json.dumps(final_results, ensure_ascii=False))
+except Exception as e:
+    print(json.dumps({"error": f"Script execution failed: {str(e)}"}))
+    sys.exit(1)

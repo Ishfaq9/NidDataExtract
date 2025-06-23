@@ -5,6 +5,7 @@ using NidDataExtract_3.Models;
 using System;
 using System.Diagnostics;
 using System.IO.Pipelines;
+using System.Security.Policy;
 using System.Text;
 
 namespace NidDataExtract_3.Controllers
@@ -241,17 +242,29 @@ namespace NidDataExtract_3.Controllers
             //string scriptPath = Path.Combine(_env.ContentRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
             //string scriptPath = "D:\\source\\NidDataExtract_3\\NidDataExtract_3\\Scripts\\combine_Tesse_easy_4.py";
             string scriptPath;
-            if (formId== "form1")
-                {
-                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_tesse_preprocess.py");
+            if (formId == "form1")
+            {
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_tesse_preprocess.py");
             }
             else if (formId == "form2")
             {
-                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_easyOcr_preprocess.py");
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_paddle_Preprocess.py");
+            }
+            else if (formId == "form3")
+            {
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "single_easyOcr_preprocess.py");
+            }
+            else if (formId == "form4")
+            {
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "combine_three_codes_(paddle_and_teseeract).py");
+            }
+            else if( formId == "form5")
+            {
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
             }
             else
             {
-                 scriptPath = Path.Combine(_env.WebRootPath, "Scripts", $"Combine_{version.ToUpper()}.py");
+                scriptPath = Path.Combine(_env.WebRootPath, "Scripts", "combine_three_codes_(paddle&teseeract&easy).py");
             }
 
             string pythonExe = "C:\\Program Files\\Python312\\python.exe";
@@ -298,4 +311,14 @@ namespace NidDataExtract_3.Controllers
     //pip install easyocr pytesseract pillow
     //pip install easyocr pytesseract pillow
     //https://github.com/tesseract-ocr/tessdata/blob/main/ben.traineddata
+    //pip install paddleocr==2.10.0
+    //pip install paddlepaddle -f https://www.paddlepaddle.org.cn/whl/mkl/avx/stable.html
+    //pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cpu
+    //pip install paddlepaddle==3.0.0 -f https://www.paddlepaddle.org.cn/whl/mkl/avx/stable.html
+    //pip uninstall torch torchvision torchaudio -y
+    //Set-ExecutionPolicy Bypass -Scope Process -Force; `
+    //    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+    //iex((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    //choco install ccache
+    //pip install numpy==1.26.4
 }

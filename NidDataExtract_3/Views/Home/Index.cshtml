@@ -136,8 +136,6 @@
         });
     </script>
 } *@
-
-
 <div class="row">
     <div class="col-4">
         <form id="nidForm" enctype="multipart/form-data">
@@ -168,20 +166,16 @@
     <div class="col-4">
         <form id="nidForm2" enctype="multipart/form-data">
             <input type="hidden" name="formId" value="form2" />
-            <label>Upload NID Image (Easy Ocr):</label>
+            <label>Upload NID Image (Paddle Ocr):</label>
             <input type="file" name="nidImage" id="nidImage2" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview2')" />
             <img id="preview2" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
             <button type="submit" class="btn btn-secondary">Submit</button>
             <div id="loading2" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
         </form>
         <div id="resultForm2" style="display: none;">
-            <h5>OCR Result (Easy Ocr)</h5>
-        @*     <input type="text" id="BengaliName2" class="form-control form-control-sm mb-2" placeholder="নাম" readonly /> *@
+            <h5>OCR Result (Paddle Ocr)</h5>
             <label class="form-label">Name (English)</label>
             <input type="text" id="EnglishName2" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
-@*             <input type="text" id="FatherName2" class="form-control form-control-sm mb-2" placeholder="পিতা" readonly />
-            <input type="text" id="MotherName2" class="form-control form-control-sm mb-2" placeholder="মাতা" readonly />
-            <input type="text" id="HusbandName2" class="form-control form-control-sm mb-2" placeholder="স্বামী/স্ত্রী" readonly /> *@
             <label class="form-label">জন্ম তারিখ</label>
             <input type="text" id="DOB2" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
             <label class="form-label">আইডি নম্বর</label>
@@ -193,26 +187,96 @@
     <div class="col-4">
         <form id="nidForm3" enctype="multipart/form-data">
             <input type="hidden" name="formId" value="form3" />
-            <label>Upload NID Image (Combine two):</label>
+            <label>Upload NID Image (Easy Ocr):</label>
             <input type="file" name="nidImage" id="nidImage3" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview3')" />
             <img id="preview3" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
             <button type="submit" class="btn btn-success">Submit</button>
             <div id="loading3" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
         </form>
         <div id="resultForm3" style="display: none;">
-            <h5>OCR Result (Combine two)</h5>
-        @*     <input type="text" id="BengaliName3" class="form-control form-control-sm mb-2" placeholder="নাম" readonly /> *@
+            <h5>OCR Result (Easy Ocr)</h5>
             <label class="form-label">Name (English)</label>
             <input type="text" id="EnglishName3" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
-@*             <input type="text" id="FatherName3" class="form-control form-control-sm mb-2" placeholder="পিতা" readonly />
-            <input type="text" id="MotherName3" class="form-control form-control-sm mb-2" placeholder="মাতা" readonly />
-            <input type="text" id="HusbandName3" class="form-control form-control-sm mb-2" placeholder="স্বামী/স্ত্রী" readonly /> *@
             <label class="form-label">জন্ম তারিখ</label>
             <input type="text" id="DOB3" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
             <label class="form-label">আইডি নম্বর</label>
             <input type="text" id="NIDNumber3" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
         </div>
     </div>
+</div>
+
+<br />
+<br />
+<br />
+
+<div class="row">
+
+    <!-- Form 4 -->
+    <div class="col-4">
+        <form id="nidForm4" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form4" />
+            <label>Upload NID Image (Tesseract & Paddle ocr):</label>
+            <input type="file" name="nidImage" id="nidImage4" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview4')" />
+            <img id="preview4" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-secondary">Submit</button>
+            <div id="loading4" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
+        </form>
+        <div id="resultForm4" style="display: none;">
+            <h5>OCR Result (Tesseract & Paddle ocr)</h5>
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName4" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB4" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber4" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+
+
+    <!-- Form 5 -->
+    <div class="col-4">
+        <form id="nidForm5" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form5" />
+            <label>Upload NID Image (Tesseract & easy ocr):</label>
+            <input type="file" name="nidImage" id="nidImage5" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview5')" />
+            <img id="preview5" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-success">Submit</button>
+            <div id="loading5" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
+        </form>
+        <div id="resultForm5" style="display: none;">
+            <h5>OCR Result (Tesseract & easy ocr)</h5>
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName5" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB5" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber5" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+
+
+    <!-- Form 6 -->
+    <div class="col-4">
+        <form id="nidForm6" enctype="multipart/form-data">
+            <input type="hidden" name="formId" value="form6" />
+            <label>Upload NID Image (Tesseract & easy & Paddle ocr):</label>
+            <input type="file" name="nidImage" id="nidImage6" class="form-control" accept="image/*" required onchange="previewImage(event, 'preview6')" />
+            <img id="preview6" style="width: 100%; display: none; margin: 10px 0; border: 1px solid #ccc; padding: 10px;" />
+            <button type="submit" class="btn btn-success">Submit</button>
+            <div id="loading6" class="mt-3 text-warning" style="display:none;">🔄 Processing...</div>
+        </form>
+        <div id="resultForm6" style="display: none;">
+            <h5>OCR Result (Tesseract & easy & Paddle ocr)</h5>
+            <label class="form-label">Name (English)</label>
+            <input type="text" id="EnglishName6" class="form-control form-control-sm mb-2" placeholder="Name" readonly />
+            <label class="form-label">জন্ম তারিখ</label>
+            <input type="text" id="DOB6" class="form-control form-control-sm mb-2" placeholder="জন্ম তারিখ" readonly />
+            <label class="form-label">আইডি নম্বর</label>
+            <input type="text" id="NIDNumber6" class="form-control form-control-sm mb-2" placeholder="আইডি নম্বর" readonly />
+        </div>
+    </div>
+
+
 </div>
 
 @section Scripts {
@@ -250,12 +314,13 @@
                 $(`#${resultId}`).hide();
 
                 $.ajax({
-                    url: '/Home/ProcessNID',
+                    url: '@Url.Action("ProcessNID", "Home")',
                     type: 'POST',
                     data: formData,
                     contentType: false,
                     processData: false,
                     success: function (data) {
+                        console.log(data)
                         $(`#${loadingId}`).hide();
                         // $(`#BengaliName${prefix}`).val(data["নাম"]);
                         $(`#EnglishName${prefix}`).val(data.name);
@@ -266,9 +331,13 @@
                         $(`#NIDNumber${prefix}`).val(data.idno);
                         $(`#${resultId}`).show();
                     },
-                    error: function () {
+                    error: function (xhr, status, error) {
+
                         $(`#${loadingId}`).hide();
                         alert("❌ Error processing image.");
+                        console.log("XHR:", xhr);
+                        console.log("Status:", status);
+                        console.log("Error:", error);
                     }
                 });
             });
@@ -278,6 +347,10 @@
         setupForm('nidForm', 'nidImage', 'loading', 'resultForm', '');
         setupForm('nidForm2', 'nidImage2', 'loading2', 'resultForm2', '2');
         setupForm('nidForm3', 'nidImage3', 'loading3', 'resultForm3', '3');
+        setupForm('nidForm4', 'nidImage4', 'loading4', 'resultForm4', '4');
+        setupForm('nidForm5', 'nidImage5', 'loading5', 'resultForm5', '5');
+        setupForm('nidForm6', 'nidImage6', 'loading6', 'resultForm6', '6');
+
     </script>
 }
 
